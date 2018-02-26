@@ -34,12 +34,16 @@ def load_vgg(sess, vgg_path):
     vgg_layer7_out_tensor_name = 'layer7_out:0'
 
 
-    tf.save_model.loader.load(sess,[vgg_tag],vgg_tag)
+    tf.saved_model.loader.load(sess,[vgg_tag],vgg_path)
     graph = tf.get_default_graph()
-    w1 = graph.get_tensor_by_name(vgg_input_tensor_name)	
-    keep = graph.get_tensor_by_name(vgg_keep_prob_tensor_name) 
+    image_input = graph.get_tensor_by_name(vgg_input_tensor_name)	
+    keep_prob = graph.get_tensor_by_name(vgg_keep_prob_tensor_name)
+    layer3_out = graph.get_tensor_by_name(vgg_layer3_out_tensor_name)
+    layer4_out = graph.get_tensor_by_name(vgg_layer4_out_tensor_name)
+    layer7_out = graph.get_tensor_by_name(vgg_layer7_out_tensor_name)
+ 
 
-    return w1, keep, None, None, None
+    return image_input, keep_prob, layer3_out, layer4_out, layer7_out
 tests.test_load_vgg(load_vgg, tf)
 
 
@@ -54,10 +58,10 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     """
     # TODO: Implement function
     conv_1x1 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, padding='same', 
-                                kernel_regulizer=tf.contrib.layers.l2_regulazer(1e-3))
-    output = tf.layers.conv2d_transpose(conv_1x1, num_classes, 4, 2, paddings='same',
-                                       kernel_regulizer=tf.contrib.layers.l2_regulazer(1e-3) 
-    return None
+                                kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+    output = tf.layers.conv2d_transpose(conv_1x1, num_classes, 4, 2, padding='same',
+                                       kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3)) 
+    return output
 tests.test_layers(layers)
 
 
@@ -73,8 +77,11 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     # TODO: Implement function
     
     logits = tf.reshape(input, (-1,num_classes))
+    cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits,labels)) 	
+    optimizer = tf.train.AdamOptimazer(learning_rate = rate) 
+    training_operation = optimizer.minimize(loss_operation)
 
-    return None, None, None
+    return logits, cross_entropy_loss, training_operation
 tests.test_optimize(optimize)
 
 
@@ -95,7 +102,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     """
     # TODO: Implement function
     for epochs in epochs:
-        for image, label in get_batches_fn(batch_size);
+        for image, label in get_batches_fn(batch_size):
             ##Trainning
             pass
     pass

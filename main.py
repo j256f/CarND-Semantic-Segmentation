@@ -101,9 +101,14 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param learning_rate: TF Placeholder for learning rate
     """
     # TODO: Implement function
-    for epochs in epochs:
+    for i in range(epochs):
+       
+
         for image, label in get_batches_fn(batch_size):
             ##Trainning
+   
+            sess.run(train_op)
+
             pass
     pass
 tests.test_train_nn(train_nn)
@@ -139,9 +144,11 @@ def run():
 
         # TODO: Train NN using the train_nn function
 
-        # TODO: Save inference data using helper.save_inference_samples
-        #  helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+        #train_nn
 
+        # TODO: Save inference data using helper.save_inference_samples
+        #helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+        
         # OPTIONAL: Apply the trained model to a video
 
 

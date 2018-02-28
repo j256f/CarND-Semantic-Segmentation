@@ -57,10 +57,31 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
     # TODO: Implement function
-    conv_1x1 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, padding='same', 
+
+    # code from Walkthrough
+    conv_1x1 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, [1,1], padding='same', 
                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-    output = tf.layers.conv2d_transpose(conv_1x1, num_classes, 4, 2, padding='same',
+    output = tf.layers.conv2d_transpose(conv_1x1, num_classes, 4, [2, 2], padding='same',
                                        kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3)) 
+
+    # Code from WarrantyVoid (fellow from Capstone proyect)
+
+    output = tf.layers.conv2d_transpose(output, num_classes, 4, [2, 2], padding='same',
+
+                                       kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3)) 
+
+ 
+
+    output = tf.layers.conv2d_transpose(output, num_classes, 16, [8, 8], padding='same',
+                                       kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                       kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3)) 
+
+
+    #skip 
+
+
+   
+ 
     return output
 tests.test_layers(layers)
 
@@ -79,14 +100,13 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     logits = tf.reshape(nn_last_layer, (-1,num_classes))
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits,labels=correct_label)) 	
     optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate) 
-    training_operation = optimizer.minimize(cross_entropy_loss)
+    train_op = optimizer.minimize(cross_entropy_loss)
 
-    return logits, training_operation, cross_entropy_loss
+    return logits, train_op, cross_entropy_loss
 tests.test_optimize(optimize)
 
 
-def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
-             correct_label, keep_prob, learning_rate):
+def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate):
     """
     Train neural network and print out the loss during training.
     :param sess: TF Session
@@ -101,16 +121,19 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param learning_rate: TF Placeholder for learning rate
     """
     # TODO: Implement function
+
+    sess.run(tf.global_variables_initializer())
+
     for i in range(epochs):
        
 
         for image, label in get_batches_fn(batch_size):
             ##Trainning
    
-            sess.run(train_op)
+            sess.run(train_op, feed_dict={input_image:image, correct_label:label, keep_prob:1.0, learning_rate:0.01})
 
-            pass
-    pass
+            
+    
 tests.test_train_nn(train_nn)
 
 
@@ -121,6 +144,15 @@ def run():
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
 
+    
+    #input_image = tf.placeholder(tf.float32,image_shape)
+    correct_label = tf.placeholder(tf.float32,(None,None,None,num_classes))
+    learning_rate = tf.placeholder(tf.float32,(None))    
+
+    epochs = 9
+    #trainning_rate = 0.0004
+    batch_size = 10
+
     # Download pretrained vgg model
     helper.maybe_download_pretrained_vgg(data_dir)
 
@@ -129,6 +161,7 @@ def run():
     #  https://www.cityscapes-dataset.com/
 
     with tf.Session() as sess:
+
         # Path to vgg model
         vgg_path = os.path.join(data_dir, 'vgg')
         # Create function to get batches
@@ -144,10 +177,15 @@ def run():
 
         # TODO: Train NN using the train_nn function
 
-        #train_nn
+        logits, train_op, cross_entropy_loss = optimize(layer_output, correct_label, learning_rate, num_classes)
+
+        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate)
+  
+        
+        
 
         # TODO: Save inference data using helper.save_inference_samples
-        #helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
         
         # OPTIONAL: Apply the trained model to a video
 

@@ -57,6 +57,20 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
     # TODO: Implement function
+    
+    # Add Skip Connection to the model (lesson 10.8.FCN-8- Decoder) 
+       
+    # Code from WarrantyVoid (fellow from Capstone proyect), recomendations from proyect submition tips
+
+
+    skip_3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, [1, 1], padding='same',
+                                       kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                       kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3)) 
+
+    skip_4 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, [1, 1], padding='same',
+                                       kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                       kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3)) 
+
 
     # code from Walkthrough
     conv_1x1 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, [1,1], padding='same', 
@@ -66,10 +80,15 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
 
     # Code from WarrantyVoid (fellow from Capstone proyect)
 
-    output = tf.layers.conv2d_transpose(output, num_classes, 4, [2, 2], padding='same',
+    output = tf.add(output, skip_4)  
+     
 
+    output = tf.layers.conv2d_transpose(output, num_classes, 4, [2, 2], padding='same',
+                                       kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
                                        kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3)) 
 
+
+    output = tf.add(output, skip_3) 
  
 
     output = tf.layers.conv2d_transpose(output, num_classes, 16, [8, 8], padding='same',
@@ -77,7 +96,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
                                        kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3)) 
 
 
-    #skip 
+    
 
 
    
@@ -98,6 +117,8 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     # TODO: Implement function
     
     logits = tf.reshape(nn_last_layer, (-1,num_classes))
+    
+    #as in Traffic_Sign_Classifier proyect
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits,labels=correct_label)) 	
     optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate) 
     train_op = optimizer.minimize(cross_entropy_loss)
@@ -124,15 +145,20 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
 
     sess.run(tf.global_variables_initializer())
 
-    for i in range(epochs):
-       
+    print("Trainning!..")
+    print()
 
+    for i in range(epochs):
+        loss = 0
         for image, label in get_batches_fn(batch_size):
             ##Trainning
-   
-            sess.run(train_op, feed_dict={input_image:image, correct_label:label, keep_prob:1.0, learning_rate:0.01})
-
             
+            # I first used learnig rate of 0.01 , I should have used 0.0003 as in Tradffic_Sign_Classifier    
+            sess.run(train_op, feed_dict={input_image:image, correct_label:label, keep_prob:0.5, learning_rate:0.0003})
+
+            # Got theses lines from Warranty void, instead of Traffic_Sign_Classfier proyect
+            loss += sess.run(cross_entropy_loss, feed_dict={input_image:image, correct_label:label, keep_prob:1.0})
+            print('epoch = {}, loss = {:.3f}'.format(i, loss)) 
     
 tests.test_train_nn(train_nn)
 
@@ -149,7 +175,7 @@ def run():
     correct_label = tf.placeholder(tf.float32,(None,None,None,num_classes))
     learning_rate = tf.placeholder(tf.float32,(None))    
 
-    epochs = 9
+    epochs = 20
     #trainning_rate = 0.0004
     batch_size = 10
 
